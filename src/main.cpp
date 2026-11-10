@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Layer812
 // BALL'S EYE GOLF R13 — first-party startup for M5Stack StopWatch.
 // The application owns its startup and drawing handoff.
 // Hardware power/reset/pins are managed solely by M5Unified.

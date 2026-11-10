@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Layer812
 #pragma once
 // BALL'S EYE GOLF - platform independent, deterministic 3D ball simulation.
 // Coordinates: X sideways, Z down the fairway, Y vertical; metres and seconds.

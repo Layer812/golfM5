@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Layer812
 #include <cassert>
 #include <cmath>
 #include <iostream>

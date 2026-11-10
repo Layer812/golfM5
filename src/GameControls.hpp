@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Layer812
 #pragma once
 // BALL'S EYE GOLF - pure game touch hit testing (466-unit design coords).
 // A gesture captures a control at touch-down. Dragging through the HIT area

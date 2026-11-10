@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Layer812
 """Host-only regression tests for R13 boot APP preflight (never communicates with hardware)."""
 import importlib.util
 import struct

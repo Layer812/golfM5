@@ -1,4 +1,6 @@
 @echo off
+rem SPDX-License-Identifier: MIT
+rem Copyright (c) 2026 Layer812
 setlocal EnableExtensions
 cd /d "%~dp0"
 set "PORT=COM16"

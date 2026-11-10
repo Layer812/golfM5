@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Layer812
 """Regression tests: R13 FIX3 factory-only layout and OTA branch safety."""
 import importlib.util
 import struct

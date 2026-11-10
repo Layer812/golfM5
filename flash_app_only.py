@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Layer812
 """Flashes only existing selected APP; checks actual 16MB partition/otadata/ESP32S3.
 
 No bootloader, NVS, filesystem, otadata or partition table writes.

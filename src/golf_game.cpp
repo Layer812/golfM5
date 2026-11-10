@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Layer812
 // BALL'S EYE GOLF — standalone M5Stack StopWatch application.
 // Hardware startup is owned by src/main.cpp; this file owns only the game.
 // Display/PMIC/touch initialization is performed once through M5Unified.
