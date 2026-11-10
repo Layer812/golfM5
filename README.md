@@ -35,6 +35,6 @@ M5Stack StopWatch（ESP32-S3R8 / 468×468 AMOLED）向け、一人称視点の�
 
 - [M5Stack / M5Unified](https://github.com/m5stack/M5Unified)
 - [M5Stack / M5GFX](https://github.com/m5stack/M5GFX)
-- [MAPLE0212 / m5stack-stopwatch-platformio](https://github.com/MAPLE0212/m5stack-stopwatch-platformio) — 起動・表示の原型となったStopWatchサンプル
+- [MAPLE0212 / m5stack-stopwatch-platformio](https://github.com/MAPLE0212/m5stack-stopwatch-platformio) 
 
 元サンプルと各依存ライブラリのライセンスに従ってください。ゴルフゲーム固有コードのライセンスは別途明記します。
