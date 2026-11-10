@@ -30,22 +30,6 @@ M5Stack StopWatch（ESP32-S3R8 / 468×468 AMOLED）向け、一人称視点の�
 
 設定メニュー：TOURNAMENT 9H、DRACON 3 BALLS、AIM STEP、AUTO CUP、SOUND、VIBRATION。
 
-## ビルドと書込み
-
-アプリは、上記GitHubサンプルの **固定コミット `f2549b0bfba6f5cfc201f51b975fa2b134a2d3a5`** を別フォルダに展開し、元の `firmware/shared/board.cpp` **82行目** `M5.Display.drawString(title, w / 2, 66);` の直後にゴルフ開始呼び出しを追加する方式です。オリジナルの `platformio.ini`、ボード定義、既存初期化処理は変更しません。
-
-Windows / PlatformIOでCOM16のROMダウンロードモードに書き込む場合、通常の全領域書込みは禁止です。実機からパーティション表と起動OTA先を読み取り専用で照合し、選択されたAPP領域だけを更新します。Bootloader、otadata、NVS、storageは書き換えません。
-
-**R12 FIX4のゲームソースと書込みスクリプトは、このリポジトリに登録済みです。** 元GitHubサンプルの固定コミットを取得して、画面表示成功済みの82行目直後へゴルフを接続します。
-
-Windows上でリポジトリをcloneし、StopWatchをROMダウンロードモードにした後、実機のCOMポートを指定して実行してください。
-
-```bat
-RUN_ORIGINAL_SAMPLE_THEN_GOLF_COM16.cmd COM16
-```
-
-実機のパーティション・起動先が確認できないときは書込みを中止します。
-
 ## 謝辞・ライセンス
 
 - [M5Stack / M5Unified](https://github.com/m5stack/M5Unified)
