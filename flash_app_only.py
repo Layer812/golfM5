@@ -98,39 +98,72 @@ def parse_partitions(buf):
         found[name] = (typ, sub, off, size)
     if not terminated or not found:
         raise RuntimeError('No partition table terminator or entries')
-    # Check label/type relationships, not any fixed application/storage offset.
+    # APP labels are intentionally free-form in ESP-IDF partition CSVs.
+    # This device uses "app0" for factory APP (type=0, subtype=0), NOT "factory".
+    # Select boot targets by their numerical type/subtype, never label spelling.
+    factory = [(n, entry) for n, entry in found.items()
+               if entry[:2] == (0, 0x00)]
+    if len(factory) > 1:
+        raise RuntimeError('Ambiguous: multiple factory APPs')
+    ota_by_slot = {}
     for name, (typ, sub, off, size) in found.items():
-        if typ == 0 and sub == 0x00 and name != 'factory':
-            raise RuntimeError('Unexpected factory APP label ' + name)
-        if typ == 0 and 0x10 <= sub <= 0x1F and name != f'ota_{sub - 0x10}':
-            raise RuntimeError('OTA name/subtype disagreement: ' + name)
-        if name.startswith('ota_') and name != 'otadata':
-            if not (typ == 0 and 0x10 <= sub <= 0x1F and name == f'ota_{sub - 0x10}'):
-                raise RuntimeError('Unexpected OTA partition definition: ' + name)
-    if 'ota_0' not in found or found['ota_0'][:2] != (0, 0x10):
-        raise RuntimeError('Cannot find a validated ota_0 APP')
-    if 'otadata' not in found or found['otadata'][:2] != (1, 0) or found['otadata'][3] != 0x2000:
-        raise RuntimeError('Cannot find two-sector OTA selection data')
-    # If factory exists and otadata is empty, the bootloader may choose factory;
-    # find_next_boot rejects that scenario.  Keep the factory APP untouched.
-    slots = sorted(int(name[4:]) for name in found if re.fullmatch(r'ota_\d+', name))
-    if not slots or slots != list(range(len(slots))):
+        if name == 'otadata' and (typ, sub) != (1, 0):
+            raise RuntimeError('otadata label has incorrect type/subtype')
+        if name == 'factory' and (typ, sub) != (0, 0):
+            raise RuntimeError('factory label has incorrect type/subtype')
+        if typ == 0 and 0x10 <= sub <= 0x1F:
+            slot = sub - 0x10
+            if slot in ota_by_slot:
+                raise RuntimeError(f'Duplicate OTA slot subtype {slot}')
+            ota_by_slot[slot] = name
+        if typ == 0 and sub not in (0x00,) and not 0x10 <= sub <= 0x1F:
+            # Never select a boot-test or unknown APP subtype.
+            raise RuntimeError(f'Unsupported APP subtype 0x{sub:02X}: {name}')
+        if re.fullmatch(r'ota_\d+', name):
+            slot = int(name[4:])
+            if (typ, sub) != (0, 0x10 + slot):
+                raise RuntimeError('OTA label/subtype disagreement: ' + name)
+    slots = sorted(ota_by_slot)
+    if slots and slots != list(range(len(slots))):
         raise RuntimeError('OTA APP numbering has missing/noncontiguous slots')
-    if len(slots) > 16:
-        raise RuntimeError('Too many OTA APPs')
+    if 'otadata' in found and found['otadata'][3] != 0x2000:
+        raise RuntimeError('otadata is not the required two-sector size')
+    if not factory and not slots:
+        raise RuntimeError('No factory APP or OTA APP')
+    if slots and 'otadata' not in found:
+        # A mixed layout without OTA selection is not safe to guess about.
+        raise RuntimeError('OTA APPs exist but otadata partition is absent')
+    if not slots and 'otadata' in found and not factory:
+        raise RuntimeError('No selectable APP')
     return found
 
 
-def find_next_boot(ota, found):
-    """Select an existing APP from real otadata and real OTA slot count."""
-    if len(ota) != 0x2000:
+def boot_apps(found):
+    """Return factory label and OTA subtype->label map from the live table."""
+    factory = next((n for n, e in found.items() if e[:2] == (0, 0)), None)
+    ota = {e[1] - 0x10: n for n, e in found.items()
+           if e[0] == 0 and 0x10 <= e[1] <= 0x1F}
+    return factory, ota
+
+
+def find_next_boot(ota_data, found):
+    """Resolve the next boot APP using live partition subtypes and otadata."""
+    factory, ota_by_slot = boot_apps(found)
+    count = len(ota_by_slot)
+    # ESP-IDF bootloader_utility_get_selected_boot_partition() selects the
+    # factory APP when app_count == 0, even if an otadata partition exists and
+    # contains stale or partially initialized records. No OTA APP can boot.
+    # Avoid rejecting this valid factory-only layout due to unused otadata.
+    if factory is not None and count == 0:
+        return factory, 'factory-only layout (no OTA APP slots)'
+    if ota_data is None:
+        raise RuntimeError('Cannot determine boot APP without otadata')
+    if len(ota_data) != 0x2000:
         raise RuntimeError('Bad otadata size')
-    slots = sorted(int(name[4:]) for name in found if re.fullmatch(r'ota_\d+', name))
-    count = len(slots)
     valid = []
     all_erased = True
     for sector in (0, 1):
-        e = ota[sector * 4096: sector * 4096 + 32]
+        e = ota_data[sector * 4096:sector * 4096 + 32]
         seq, = struct.unpack_from('<I', e, 0)
         state, crc = struct.unpack_from('<II', e, 24)
         all_erased &= e == b'\xff' * 32
@@ -147,15 +180,17 @@ def find_next_boot(ota, found):
             raise RuntimeError(f'Unaccepted OTA state {state} in sector {sector}')
         valid.append((seq, sector))
     if valid:
+        if not count:
+            raise RuntimeError('otadata selects OTA but there is no OTA APP')
         seq, sector = max(valid)
-        label = f'ota_{(seq - 1) % count}'
-        if label not in found:
-            raise RuntimeError('Selected APP is not in partition table')
+        slot = (seq - 1) % count
+        label = ota_by_slot[slot]
         return label, f'otadata sector={sector} seq={seq} / {count} actual OTA APP(s)'
     if all_erased:
-        if 'factory' in found:
-            raise RuntimeError('Erased otadata + factory APP: refusing uncertain boot target')
-        return 'ota_0', 'erased otadata without factory -> ota_0'
+        if factory is not None:
+            return factory, 'erased otadata -> actual factory APP'
+        if count:
+            return ota_by_slot[0], 'erased otadata without factory -> OTA subtype 0x10'
     raise RuntimeError('Cannot determine next boot APP')
 
 
@@ -190,9 +225,16 @@ def main():
     print(f'PASS: validated live partition table ({len(found)} entries)', flush=True)
     for name, (typ, sub, off, cap) in found.items():
         print(f'  {name}: type={typ} subtype=0x{sub:02X} offset=0x{off:X} size=0x{cap:X}', flush=True)
-    print('READ-ONLY OTA BOOT SELECTION', flush=True)
-    _, _, ota_off, ota_size = found['otadata']
-    label, detail = find_next_boot(read(port, ota_off, ota_size), found)
+    print('READ-ONLY BOOT APP SELECTION', flush=True)
+    factory, ota_slots = boot_apps(found)
+    # With no OTA APP partitions, the bootloader always uses factory and does
+    # not consult otadata for choosing an APP. Skip this unnecessary read.
+    if 'otadata' in found and ota_slots:
+        _, _, ota_off, ota_size = found['otadata']
+        ota_data = read(port, ota_off, ota_size)
+    else:
+        ota_data = None
+    label, detail = find_next_boot(ota_data, found)
     _, _, off, cap = found[label]
     if size > cap:
         raise RuntimeError(f'APP size {size} exceeds live boot APP capacity {cap} ({label})')
@@ -215,5 +257,5 @@ if __name__ == '__main__':
         main()
     except (Exception,) as exc:
         print('SAFE STOP:', exc, file=sys.stderr, flush=True)
-        print('If connection failed, ensure COM16 is in DOWNLOAD mode and no serial monitor is using it.', file=sys.stderr, flush=True)
+        print('If connection failed, ensure the selected COM port is in DOWNLOAD mode and no serial monitor is using it.', file=sys.stderr, flush=True)
         sys.exit(1)

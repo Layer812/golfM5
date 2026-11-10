@@ -1,6 +1,6 @@
-// BALL'S EYE GOLF: existing R5 FIX2 game logic linked to the original 00_smoke.
-// The original sample owns M5.begin(), display configuration, and first drawString().
-// No M5.begin(), panel re-init, GPIO, or original sample build-setting changes here.
+// BALL'S EYE GOLF — standalone M5Stack StopWatch application.
+// Hardware startup is owned by src/main.cpp; this file owns only the game.
+// Display/PMIC/touch initialization is performed once through M5Unified.
 #include <Arduino.h>
 #include <M5Unified.h>
 #include <M5GFX.h>
@@ -98,7 +98,7 @@ uint32_t vibrationUntil = 0, pendingToneAt = 0;
 bool vibrationEnabled = false;
 bool speakerVolumeConfigured = false;
 // The first queued audio used to disappear. Prime the speaker with silence
-// AFTER the physically successful sample drawString; retry a rejected PCM queue.
+// After the initial visible title draw, retry a rejected PCM queue.
 static const int16_t kSpeakerWarmupSilence[2048] = {};
 const int16_t* queuedClubSound = nullptr;
 size_t queuedClubFrames = 0;
@@ -972,8 +972,8 @@ void afterTone(uint16_t hz, uint16_t ms, uint32_t delayMs) {
     pendingToneFreq = hz;
     pendingToneDuration = ms;
 }
-// Speaker and panel setup are kept separate. This is called only after
-// the original 00_smoke board.cpp has finished its visible first drawString.
+// Speaker and panel setup are kept separate. Called after our own first
+// display drawString and the game's initial screen render.
 void primeGolfSpeaker() {
     if (!settingsSound) return;
     M5.Speaker.setVolume(112);
@@ -1921,17 +1921,17 @@ static void golfLoopOnce() {
     delay(1);
 }
 
-// Invoked precisely after the original board.cpp drawHeader() title drawString.
-// This function intentionally never returns to the sample's 00_smoke UI.
-namespace c152 {
-void startBallsEyeGolfFromVisibleSample() {
+// Game entry invoked by the application startup.
+// M5.begin() is called once by our own src/main.cpp before this entry.
+namespace balls_eye_golf {
+void begin() {
     displayReady = true;
     screenW = M5.Display.width();
     screenH = M5.Display.height();
     unitScale = float(screenW) / 466.0f;
     precomputeScene();
     newGame();
-    // Start the game's real direct drawing immediately after the sample's drawString.
+    // First frame: draw the game screen directly.
     M5.Display.startWrite();
     render(M5.Display);
     M5.Display.endWrite();
@@ -1939,10 +1939,14 @@ void startBallsEyeGolfFromVisibleSample() {
     scene.setPsram(true);
     haveScene = (scene.createSprite(SCENE_SIDE, SCENE_SIDE) != nullptr);
     if (haveScene) presentGame();
-    // Speaker wake-up happens after the visible sample and the first golf draw.
+    // Speaker wake-up happens after the visible title and the first golf draw.
     primeGolfSpeaker();
     lastPhysicsUs = micros();
     lastDraw = millis();
-    for (;;) golfLoopOnce();
+    // Return to Arduino so the normal loop() can service the game each frame.
+}
+
+void update() {
+    golfLoopOnce();
 }
 }
