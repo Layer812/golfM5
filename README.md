@@ -2,7 +2,11 @@
 
 M5Stack StopWatch（ESP32-S3R8 / 468×468 AMOLED）向け、一人称視点のゴルフゲーム。
 
-> 開発版：R12 FIX4（AUTO CUP ON/OFF）。実機で表示確認済みの起動経路は、[MAPLE0212/m5stack-stopwatch-platformio](https://github.com/MAPLE0212/m5stack-stopwatch-platformio) の `00_smoke` を基準としています。R12 FIX4自体の実機動作は未確認です。
+<img src = "66e16480-e4b8-441a-9c59-ccfb17013c2e.png" width=240> <img src = "622858ee-cdf8-4766-8c43-83b52ee1f9a4.png" width=240> 
+<br> Image of prototype shown; final product may vary.
+
+## Share Code
+ M5bunner: K6QLhtHT8JSs3j9S
 
 ## ゲーム内容
 
