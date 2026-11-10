@@ -5,7 +5,8 @@ M5Stack StopWatch（ESP32-S3R8 / 468×468 AMOLED）向け、一人称視点の�
 <img src = "66e16480-e4b8-441a-9c59-ccfb17013c2e.png" width=240> <img src = "622858ee-cdf8-4766-8c43-83b52ee1f9a4.png" width=240> 
 <br> Image of prototype shown; final product may vary.
 
-## Share Code
+## Install
+ https://burner.m5stack.com/WQ7ULB
  M5bunner: K6QLhtHT8JSs3j9S
 
 ## ゲーム内容
