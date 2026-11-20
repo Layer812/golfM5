@@ -213,6 +213,14 @@ struct Game {
         updateAim();
     }
 
+    // Smooth horizontal swipe steering in degrees; shares the +/- 75 deg limit.
+    void steerAimDelta(float deltaDegrees) {
+        if (state != State::READY || fabsf(deltaDegrees) < 0.001f) return;
+        static constexpr float LIMIT = 1.308996939f;  // +/- 75 degrees
+        aimOffset = clampf(aimOffset + deltaDegrees * 0.01745329251994f, -LIMIT, LIMIT);
+        updateAim();
+    }
+
     bool shoot() {
         if (state != State::READY) return false;
         updateAim();

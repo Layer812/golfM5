@@ -1,6 +1,6 @@
 # BALL'S EYE GOLF — golfM5
 
-[English](README.md) | [日本語](README_JA.md)
+[English](README.md) | [日本語](README_JA.md) | [简体中文](README_ZH.md)
 
 M5Stack **StopWatch**（円形AMOLED）向けの一人称視点ゴルフゲームです。**ボール自身の視点**から、飛行、着地、転がり、カップインまでを楽しめます。
 
@@ -31,8 +31,8 @@ M5Stack **StopWatch**（円形AMOLED）向けの一人称視点ゴルフゲー�
 | --- | --- |
 | 右物理ボタン | ショット |
 | 左物理ボタン | 設定メニューの開閉 |
-| 画面左右の矢印 | 照準の左右調整 |
-| IMPACT円のドラッグ | 左右の打点変更 |
+| 画面を左右にスワイプ | 照準の左右調整 |
+| 下部IMPACT円のドラッグ | 左右の打点変更（操作中は画面中央に拡大プレビュー表示） |
 | ホール終了後のタップ／物理ボタン | 次ホール／新ラウンド |
 
 設定メニューには **TOURNAMENT 9H / DRACON 3 BALLS / AIM STEP / AUTO CUP / SOUND / VIBRATION** を用意しています。
