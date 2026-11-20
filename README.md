@@ -1,6 +1,6 @@
 # BALL'S EYE GOLF — golfM5
 
-[English](README.md) | [日本語](README_JA.md)
+[English](README.md) | [日本語](README_JA.md) | [简体中文](README_ZH.md)
 
 A first-person golf game for the **M5Stack StopWatch**. Play from the **ball's point of view** and experience each shot, bounce, roll, and drop on a round AMOLED display.
 
@@ -31,8 +31,8 @@ The WebBurner release may not match the latest source revision in this repositor
 | --- | --- |
 | Right physical button | Take a shot |
 | Left physical button | Open or close the settings menu |
-| On-screen left/right arrows | Adjust aim |
-| Drag the IMPACT circle | Adjust the left/right impact point |
+| Swipe left/right on screen | Adjust aim direction |
+| Drag the bottom IMPACT circle | Adjust the left/right impact point (magnified live preview appears at center) |
 | Tap or press a physical button after completing a hole | Proceed to the next hole or start a new round |
 
 Settings include **TOURNAMENT 9H**, **DRACON 3 BALLS**, **AIM STEP**, **AUTO CUP**, **SOUND**, and **VIBRATION**.

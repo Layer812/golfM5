@@ -1343,25 +1343,60 @@ void textAt(D&d,const char* s,int px,int py,uint16_t col,
 }
 
 template<class D>
+void textAtSmall(D&d,const char* s,int px,int py,uint16_t col) {
+    d.setTextDatum(middle_center);
+    d.setTextColor(col);
+    d.setFont(&fonts::FreeSansBold9pt7b);
+    d.drawString(s,S((float)px),S((float)py));
+}
+
+template<class D>
+void drawArcHint(D& d, const char* label, float centerDeg, float spanDeg, uint16_t textCol) {
+    // Curved edge badge following the circular bezel (11 o'clock / 1 o'clock).
+    const float a0 = centerDeg - spanDeg * 0.5f;
+    const float a1 = centerDeg + spanDeg * 0.5f;
+    d.fillArc(S(233), S(233), S(222), S(196), a0, a1, rgb(9,35,49));
+    d.drawArc(S(233), S(233), S(222), S(196), a0, a1, rgb(64,142,150));
+    d.setTextDatum(middle_center);
+    d.setTextColor(textCol);
+    d.setFont(&fonts::FreeSansBold9pt7b);
+    const int n = (int)strlen(label);
+    if (n <= 0) return;
+    const float r = 209.0f;
+    const float stepDeg = (n > 1) ? ((spanDeg - 7.0f) / float(n - 1)) : 0.0f;
+    const float startDeg = centerDeg - stepDeg * float(n - 1) * 0.5f;
+    char ch[2] = {0, 0};
+    for (int i = 0; i < n; ++i) {
+        ch[0] = label[i];
+        if (ch[0] == ' ') continue;
+        const float rad = (startDeg + stepDeg * float(i)) * 0.01745329251994f;
+        const float px = 233.0f + r * cosf(rad);
+        const float py = 233.0f + r * sinf(rad);
+        d.drawString(ch, S(px), S(py));
+    }
+}
+
+template<class D>
 void drawMap(D &d) {
-    // Mini map is the actual course spline, hazards and cup position.
-    d.fillRoundRect(S(113),S(72),S(68),S(106),S(16),rgb(9,50,44));
+    // Mini map on the left edge (9 o'clock), symmetric with the right power bar.
+    d.fillRoundRect(S(32),S(148),S(62),S(172),S(16),rgb(9,50,44));
+    d.drawRoundRect(S(32),S(148),S(62),S(172),S(16),rgb(52,126,114));
     const float len=game.holeZ+18.0f;
-    auto mx=[&](float wx){return S(147.0f+clampf(wx*.67f,-28.f,28.f));};
-    auto my=[&](float wz){return S(163.0f-78.f*clampf(wz/len,0.f,1.f));};
+    auto mx=[&](float wx){return S(63.0f+clampf(wx*.56f,-24.f,24.f));};
+    auto my=[&](float wz){return S(304.0f-140.f*clampf(wz/len,0.f,1.f));};
     for(int i=0;i<game.course().fairwayCount-1;++i) {
         const FairwayNode &a=game.course().path[i];
         const FairwayNode &b=game.course().path[i+1];
         int ya=my(a.z),yb=my(b.z);
         int ax=mx(a.x),bx=mx(b.x);
-        d.fillTriangle(ax-S(a.halfWidth*.57f),ya,ax+S(a.halfWidth*.57f),ya,
-                       bx-S(b.halfWidth*.57f),yb,rgb(36,144,75));
-        d.fillTriangle(ax+S(a.halfWidth*.57f),ya,bx-S(b.halfWidth*.57f),yb,
-                       bx+S(b.halfWidth*.57f),yb,rgb(36,144,75));
+        d.fillTriangle(ax-S(a.halfWidth*.48f),ya,ax+S(a.halfWidth*.48f),ya,
+                       bx-S(b.halfWidth*.48f),yb,rgb(36,144,75));
+        d.fillTriangle(ax+S(a.halfWidth*.48f),ya,bx-S(b.halfWidth*.48f),yb,
+                       bx+S(b.halfWidth*.48f),yb,rgb(36,144,75));
     }
     if(game.course().terrain==RAVINE) {
-        d.drawLine(S(119),my(game.course().ravineStart),S(175),my(game.course().ravineStart),rgb(224,166,92));
-        d.drawLine(S(119),my(game.course().ravineEnd),S(175),my(game.course().ravineEnd),rgb(224,166,92));
+        d.drawLine(S(38),my(game.course().ravineStart),S(88),my(game.course().ravineStart),rgb(224,166,92));
+        d.drawLine(S(38),my(game.course().ravineEnd),S(88),my(game.course().ravineEnd),rgb(224,166,92));
     }
     for(int i=0;i<game.bunkerCount();++i) {
         const HazardEllipse b=game.bunker(i);
@@ -1369,7 +1404,7 @@ void drawMap(D &d) {
     }
     for(int i=0;i<game.pondCount();++i) {
         const HazardEllipse p=game.pond(i);
-        d.fillEllipse(mx(p.x),my(p.z),S(3+clampf(p.rx*.15f,0,3)),S(3+clampf(p.rz*.07f,0,3)),rgb(23,147,214));
+        d.fillEllipse(mx(p.x),my(p.z),S(3+clampf(p.rx*.13f,0,3)),S(3+clampf(p.rz*.08f,0,4)),rgb(23,147,214));
     }
     d.fillCircle(mx(game.holeX),my(game.holeZ),S(5),rgb(74,200,107));
     d.fillCircle(mx(game.holeX),my(game.holeZ),S(2),cBlack);
@@ -1380,8 +1415,9 @@ void drawMap(D &d) {
 
 template<class D>
 void drawWind(D& d) {
-    d.fillRoundRect(S(184),S(82),S(83),S(92),S(16),rgb(8,52,62));
-    textAt(d,"WIND",225,99,rgb(194,239,242));
+    // Wind indicator placed at bottom-right (5 o'clock), freeing the upper view.
+    d.fillRoundRect(S(282),S(334),S(80),S(82),S(16),rgb(8,52,62));
+    textAtSmall(d,"WIND",322,349,rgb(194,239,242));
     // Arrow represents the direction wind is BLOWING, projected into the
     // player's current horizon (right/up on screen = world right/forward).
     const float side=game.windX*game.aimZ-game.windZ*game.aimX;
@@ -1389,17 +1425,90 @@ void drawWind(D& d) {
     float len=length2(side,front);
     float dx=len>.01f ? side/len : 1.0f;
     float dy=len>.01f ? -front/len : 0.0f;
-    int xc=S(225),yc=S(131),reach=S(15);
+    int xc=S(322),yc=S(376),reach=S(12);
     int x2=xc+(int)(dx*reach),y2=yc+(int)(dy*reach);
     uint16_t col=rgb(121,231,247);
-    d.drawLine(xc-(int)(dx*S(9)),yc-(int)(dy*S(9)),x2,y2,col);
-    d.fillTriangle(x2,y2,x2-(int)((dx*.75f-dy*.65f)*S(9)),
-                   y2-(int)((dy*.75f+dx*.65f)*S(9)),
-                   x2-(int)((dx*.75f+dy*.65f)*S(9)),
-                   y2-(int)((dy*.75f-dx*.65f)*S(9)),col);
+    d.drawLine(xc-(int)(dx*S(7)),yc-(int)(dy*S(7)),x2,y2,col);
+    d.fillTriangle(x2,y2,x2-(int)((dx*.75f-dy*.65f)*S(7)),
+                   y2-(int)((dy*.75f+dx*.65f)*S(7)),
+                   x2-(int)((dx*.75f+dy*.65f)*S(7)),
+                   y2-(int)((dy*.75f-dx*.65f)*S(7)),col);
     char tmp[24];
     snprintf(tmp,sizeof(tmp),"%.1fm/s",game.windSpeed());
-    textAt(d,tmp,225,159,cWhite);
+    textAtSmall(d,tmp,322,403,cWhite);
+}
+
+template<class D>
+void drawHoleInfo(D& d) {
+    // Round/hole status card at bottom-left (7 o'clock), symmetric with wind.
+    char tmp[32];
+    d.fillRoundRect(S(104),S(334),S(80),S(82),S(16),rgb(9,43,54));
+    if(mode==GameMode::TOURNAMENT) {
+        snprintf(tmp,sizeof(tmp),"PAR %d",game.holePar);
+    } else snprintf(tmp,sizeof(tmp),"BEST");
+    textAtSmall(d,tmp,144,349,rgb(242,216,127));
+    if(mode==GameMode::TOURNAMENT)
+        snprintf(tmp,sizeof(tmp),"%.0fm",game.distance);
+    else
+        snprintf(tmp,sizeof(tmp),"%.0fm",bestDrive);
+    textAt(d,tmp,144,376,cWhite,false);
+    if(mode==GameMode::TOURNAMENT)
+        snprintf(tmp,sizeof(tmp),"SHOT %d",game.shots+((game.state==State::READY)?1:0));
+    else
+        snprintf(tmp,sizeof(tmp),"TRY %d",driveAttempt+(game.state==State::READY?1:0));
+    textAtSmall(d,tmp,144,403,cWhite);
+}
+
+template<class D>
+void drawPowerMeter(D& d) {
+    // Tall vertical power gauge on the right edge (3 o'clock),
+    // symmetric with the left mini-map for easier timing.
+    textAtSmall(d,"PWR",416,136,cWhite);
+    d.fillRoundRect(S(398),S(148),S(36),S(172),S(12),rgb(22,52,58));
+    d.drawRoundRect(S(398),S(148),S(36),S(172),S(12),rgb(68,142,148));
+    const int meterTop=156, meterH=156;
+    const int active=(int)(game.currentPower * meterH);
+    const uint16_t barCol =
+        game.currentPower > .75f ? rgb(234,101,63) :
+        (game.currentPower > .40f ? rgb(242,207,81) : rgb(99,203,114));
+    if (active > 0) {
+        d.fillRect(S(405),S(meterTop+meterH-active),S(22),S(active),barCol);
+    }
+    d.drawRect(S(405),S(meterTop),S(22),S(meterH),cWhite);
+    // 25%, 50%, 75% reference ticks for timing consistency.
+    for (int q=1; q<=3; ++q) {
+        const int ty = meterTop + (meterH * q) / 4;
+        d.drawLine(S(405),S(ty),S(426),S(ty),rgb(190,224,224));
+    }
+}
+
+template<class D>
+void drawImpactZoom(D& d) {
+    // Magnified center overlay while dragging the 6 o'clock IMPACT pad so the
+    // player's finger never obscures the live impact point.
+    const int cx = 233, cy = 212;
+    d.fillCircle(S(cx),S(cy),S(86),rgb(8,36,48));
+    d.drawCircle(S(cx),S(cy),S(86),rgb(104,216,224));
+    d.drawCircle(S(cx),S(cy),S(84),rgb(44,120,132));
+    textAtSmall(d,"IMPACT",cx,146,rgb(200,239,226));
+    const int ballY = 210, ballR = 50;
+    d.fillCircle(S(cx),S(ballY),S(ballR),rgb(244,246,232));
+    d.drawCircle(S(cx),S(ballY),S(ballR),rgb(123,158,150));
+    d.drawLine(S(cx-42),S(ballY),S(cx+42),S(ballY),rgb(143,161,157));
+    d.drawLine(S(cx),S(ballY-42),S(cx),S(ballY+42),rgb(143,161,157));
+    // Half-offset reference ticks.
+    d.drawLine(S(cx-19),S(ballY-8),S(cx-19),S(ballY+8),rgb(160,175,172));
+    d.drawLine(S(cx+19),S(ballY-8),S(cx+19),S(ballY+8),rgb(160,175,172));
+    const int dotX = S(cx) + S(game.hitSide * 38.0f);
+    d.fillCircle(dotX,S(ballY),S(13),rgb(255,83,63));
+    d.drawCircle(dotX,S(ballY),S(13),cBlack);
+    d.fillCircle(dotX-S(3),S(ballY-3),S(3),rgb(255,190,180));
+    char readout[24];
+    const int pct = (int)lroundf(fabsf(game.hitSide) * 100.0f);
+    if (game.hitSide < -0.04f) snprintf(readout,sizeof(readout),"LEFT %d%%",pct);
+    else if (game.hitSide > 0.04f) snprintf(readout,sizeof(readout),"RIGHT %d%%",pct);
+    else snprintf(readout,sizeof(readout),"CENTER");
+    textAtSmall(d,readout,cx,276,cGold);
 }
 
 template<class D>
@@ -1490,26 +1599,14 @@ void drawLongDriveResult(D& d) {
 }
 
 template<class D>
-void drawAimArrows(D& d) {
-    // Draw controls inside the round glass, away from the strike/power pad.
-    const uint16_t bg=rgb(9,48,59), edge=rgb(92,207,211);
-    const int cy=S(236), left=S(57), right=S(409), radius=S(33);
-    d.fillCircle(left,cy,radius,bg);
-    d.drawCircle(left,cy,radius,edge);
-    d.fillCircle(right,cy,radius,bg);
-    d.drawCircle(right,cy,radius,edge);
-    // Bold, font-independent arrows visible on the AMOLED.
-    const uint16_t ink=cWhite;
-    d.fillRect(left-S(3),cy-S(5),S(22),S(10),ink);
-    d.fillTriangle(left-S(19),cy,left+S(2),cy-S(19),left+S(2),cy+S(19),ink);
-    d.fillRect(right-S(19),cy-S(5),S(22),S(10),ink);
-    d.fillTriangle(right+S(19),cy,right-S(2),cy-S(19),right-S(2),cy+S(19),ink);
-    // Signed direction relative to the cup; orientation affects actual shot.
-    d.fillRoundRect(S(135),S(281),S(196),S(37),S(12),rgb(9,35,49));
+void drawAimBadge(D& d) {
+    // Compact aim heading readout tucked beneath the top hole title,
+    // leaving the center view completely open for swipe aiming.
+    d.fillRoundRect(S(171),S(56),S(124),S(24),S(10),rgb(9,35,49));
     char bearing[32];
     snprintf(bearing,sizeof(bearing),"AIM %+d DEG",
              (int)lroundf(game.aimOffset * (180.0f/3.141592653589793f)));
-    textAt(d,bearing,233,299,cGold);
+    textAtSmall(d,bearing,233,68,cGold);
 }
 
 template<class D>
@@ -1528,67 +1625,52 @@ void drawHUD(D&d) {
     if(game.state==State::HOLED) { drawCupHUD(d); return; }
     if(game.state==State::SINKING) { drawWaterHUD(d); return; }
     char tmp[64];
-    d.fillRoundRect(S(100),S(14),S(266),S(42),S(18),rgb(9,35,49));
+    d.fillRoundRect(S(130),S(22),S(206),S(30),S(13),rgb(9,35,49));
     if(mode==GameMode::TOURNAMENT) {
         snprintf(tmp,sizeof(tmp),"H%d/9 %s",currentHole+1,game.course().name);
-        textAt(d,tmp,233,34,cWhite,false);
+        textAtSmall(d,tmp,233,37,cWhite);
     } else {
-        snprintf(tmp,sizeof(tmp),"DRACON  TRY %d/3",driveResult?driveAttempt:driveAttempt+1);
-        textAt(d,tmp,233,34,cWhite,false);
+        snprintf(tmp,sizeof(tmp),"DRACON TRY %d/3",driveResult?driveAttempt:driveAttempt+1);
+        textAtSmall(d,tmp,233,37,cWhite);
     }
-    textAt(d,"L MENU  R SHOT",233,64,rgb(200,239,226));
+    // Curved physical button hints hugging the 11 o'clock and 1 o'clock bezel.
+    drawArcHint(d,"MENU",221.0f,22.0f,rgb(200,239,226));
+    drawArcHint(d,"SHOT",319.0f,22.0f,rgb(242,216,127));
     drawMap(d);
-    drawWind(d);
-    d.fillRoundRect(S(270),S(75),S(97),S(106),S(22),rgb(9,43,54));
-    if(mode==GameMode::TOURNAMENT) {
-        snprintf(tmp,sizeof(tmp),"PAR %d",game.holePar);
-    } else snprintf(tmp,sizeof(tmp),"BEST");
-    textAt(d,tmp,318,93,rgb(242,216,127));
-    if(mode==GameMode::TOURNAMENT)
-        snprintf(tmp,sizeof(tmp),"%.0fm",game.distance);
-    else
-        snprintf(tmp,sizeof(tmp),"%.0fm",bestDrive);
-    textAt(d,tmp,318,124,cWhite,true);
-    if(mode==GameMode::TOURNAMENT)
-        snprintf(tmp,sizeof(tmp),"SHOT %d",game.shots+((game.state==State::READY)?1:0));
-    else
-        snprintf(tmp,sizeof(tmp),"TRY %d",driveAttempt+(game.state==State::READY?1:0));
-    textAt(d,tmp,318,156,cWhite);
+
     if(game.inSand()) {
-        d.fillRoundRect(S(151),S(182),S(166),S(31),S(10),rgb(92,75,29));
-        textAt(d,"BUNKER LIE",233,196,cWhite);
+        d.fillRoundRect(S(165),S(86),S(136),S(26),S(9),rgb(92,75,29));
+        textAtSmall(d,"BUNKER LIE",233,99,cWhite);
     }
     if(game.state==State::READY && lastWaterResetAtMs &&
         uint32_t(millis()-lastWaterResetAtMs)<3200u) {
-        d.fillRoundRect(S(128),S(213),S(210),S(44),S(14),rgb(15,64,80));
-        textAt(d,"RESUME +2 STROKES",233,233,cWhite);
+        d.fillRoundRect(S(138),S(118),S(190),S(34),S(12),rgb(15,64,80));
+        textAtSmall(d,"RESUME +2 STROKES",233,135,cWhite);
     }
 
-    // Aim controls are only active while preparing the next stroke.
-    if(game.state==State::READY) drawAimArrows(d);
-
-    // Touch only adjusts the impact point. The right physical button shoots;
-    // the power meter itself cannot trigger a shot.
+    // Touch controls: swipe horizontally anywhere to aim; drag 6 o'clock IMPACT
+    // pad to adjust hit point. Right physical button fires the shot.
     if(game.state==State::READY) {
-        d.fillRoundRect(S(109),S(325),S(249),S(106),S(36),rgb(9,35,45));
-        textAt(d,"IMPACT",165,344,rgb(230,237,212));
-        d.fillCircle(S(165),S(382),S(28),rgb(244,246,232));
-        d.drawCircle(S(165),S(382),S(28),rgb(123,158,150));
-        d.drawLine(S(143),S(382),S(187),S(382),rgb(143,161,157));
-        d.drawLine(S(165),S(361),S(165),S(403),rgb(143,161,157));
-        d.fillCircle(S(165)+S(game.hitSide*21),S(382),S(8),rgb(255,83,63));
-        d.drawCircle(S(165)+S(game.hitSide*21),S(382),S(8),cBlack);
+        drawAimBadge(d);
+        drawPowerMeter(d);
+        drawHoleInfo(d);
+        drawWind(d);
 
-        int meterTop=348, meterH=59;
-        d.fillRoundRect(S(252),S(meterTop-4),S(48),S(meterH+8),S(9),rgb(44,82,86));
-        int active=(int)(game.currentPower * meterH);
-        d.fillRect(S(259),S(meterTop+meterH-active),S(34),S(active),
-            game.currentPower > .75f ? rgb(234,101,63) :
-            (game.currentPower > .40f ? rgb(242,207,81):rgb(99,203,114)));
-        d.drawRect(S(259),S(meterTop),S(34),S(meterH),cWhite);
-        textAt(d,"PWR",327,359,cWhite);
-        textAt(d,"RIGHT",327,388,cGold);
-        textAt(d,"BTN",327,416,cWhite);
+        // 6 o'clock IMPACT pad.
+        d.fillRoundRect(S(191),S(342),S(84),S(104),S(24),rgb(9,35,45));
+        d.drawRoundRect(S(191),S(342),S(84),S(104),S(24),
+                        gesture.isEditingImpact() ? rgb(104,216,224) : rgb(52,116,124));
+        textAtSmall(d,"IMPACT",233,357,rgb(230,237,212));
+        d.fillCircle(S(233),S(402),S(28),rgb(244,246,232));
+        d.drawCircle(S(233),S(402),S(28),rgb(123,158,150));
+        d.drawLine(S(211),S(402),S(255),S(402),rgb(143,161,157));
+        d.drawLine(S(233),S(380),S(233),S(424),rgb(143,161,157));
+        d.fillCircle(S(233)+S(game.hitSide*21),S(402),S(8),rgb(255,83,63));
+        d.drawCircle(S(233)+S(game.hitSide*21),S(402),S(8),cBlack);
+
+        if (gesture.isEditingImpact()) {
+            drawImpactZoom(d);
+        }
     } else {
         // A high-contrast flight/roll readout, all inside the round screen.
         d.fillRoundRect(S(111),S(329),S(244),S(99),S(24),rgb(10,45,56));
@@ -1837,11 +1919,17 @@ void input() {
     // Right physical key alone initiates a shot.
     if(M5.BtnB.wasPressed() && game.state==State::READY) {fire();return;}
     const float ux=td.x/unitScale, uy=td.y/unitScale;
+    const bool wasEditingImpact=gesture.isEditingImpact();
     TouchTarget a=gesture.update(down,ux,uy,false,game.hitSide);
-    if(a==TouchTarget::AIM_LEFT&&game.state==State::READY) {
-        game.steerAim(-1,settingsAimStep);forceDraw=true;
-    } else if(a==TouchTarget::AIM_RIGHT&&game.state==State::READY) {
-        game.steerAim(1,settingsAimStep);forceDraw=true;
+    if(a==TouchTarget::AIM_DRAG && game.state==State::READY) {
+        // Scale swipe sensitivity with AIM STEP setting (1=fine, 5=medium, 10=fast).
+        // Natural drag direction: dragging right pans the camera left.
+        const float degPerPx = (settingsAimStep == 1) ? 0.12f :
+                               (settingsAimStep == 10 ? 0.40f : 0.25f);
+        game.steerAimDelta(-gesture.aimDragDeltaPx * degPerPx);
+        forceDraw=true;
+    } else if(a==TouchTarget::IMPACT || wasEditingImpact!=gesture.isEditingImpact()) {
+        forceDraw=true;
     }
 }
 } // namespace
